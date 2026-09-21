@@ -1,8 +1,10 @@
-# Azure Friday — SRE Agent Demo Lab
+# Wellbeing App — Azure SRE Agent Demo
 
-**Complete lab for demonstrating Azure SRE Agent capabilities with Scott Hanselman**
+**A complete, deployable lab for demonstrating Azure SRE Agent investigation, governance, and remediation workflows.**
 
-> Deploy a realistic e-commerce platform ("Zava — Intelligent Athletic Apparel"), break it on purpose, and watch Azure SRE Agent detect, diagnose, and remediate issues autonomously.
+> Deploy a non-clinical employee wellbeing portal with a supporting operational API, introduce controlled failures, and use Azure SRE Agent to investigate the evidence and propose bounded remediation.
+
+The public experience is **Zava Wellbeing**. The supporting API and synthetic catalog database provide repeatable SQL, health-check, deployment, and alert scenarios for the SRE demonstration.
 
 ---
 
@@ -67,7 +69,7 @@
 | **.NET SDK** | 8.0+ | `winget install Microsoft.DotNet.SDK.8` |
 | **Python** | 3.11+ | `winget install Python.Python.3.12` |
 | **Node.js** | 18+ | `winget install OpenJS.NodeJS.LTS` |
-| **srectl CLI** | latest | [Install docs](https://learn.microsoft.com/azure/sre-agent) |
+| **Azure SRE Agent portal** | current | [sre.azure.com](https://sre.azure.com) |
 | **ServiceNow PDI** | — | [Free instance](https://developer.servicenow.com/) |
 
 > **Optional:** SQL Server Management Studio (SSMS) or Azure Data Studio for database inspection.
@@ -123,7 +125,7 @@ wellbeing-app-sre-agent/
 │   ├── deploy.ps1                  # One-click deployment script
 │   └── seed-database.sql           # Products, Orders, OrderItems seed data
 │
-├── src/                            # Main .NET 8 API (Zava storefront)
+├── src/                            # Main .NET 8 operational demo API
 │   ├── Program.cs                  # Minimal API: /health, /api/products
 │   ├── AzureFridayApp.csproj       # .NET project (SQL Client, App Insights)
 │   └── appsettings.json            # Connection string config
@@ -146,7 +148,7 @@ wellbeing-app-sre-agent/
 │   ├── demo.py                     # Interactive CLI with 5 scenarios
 │   └── requirements.txt            # rich, requests, pymssql
 │
-├── sre-config/                     # SRE Agent configuration (srectl)
+├── sre-config/                     # SRE Agent Builder definitions
 │   ├── agent1/                     # SQL & App Performance Agent
 │   │   ├── agents/
 │   │   │   ├── deployment-validator/       # Post-deploy health checks
@@ -172,7 +174,6 @@ wellbeing-app-sre-agent/
 │           └── LookupServiceNowIncident/   # ServiceNow integration
 │
 ├── dashboard.json                  # Azure Portal dashboard template
-├── .github/workflows/deploy.yml    # CI/CD pipeline with SRE Agent trigger
 └── .gitignore
 ```
 
@@ -247,33 +248,27 @@ The simulator opens a long-running transaction that holds locks on the Orders ta
 | **SRE Agent features** | GitHub Actions HTTP trigger, `deployment-validator` extended agent, GitHub MCP connector, health endpoint monitoring |
 
 **Setup:**
-1. Configure the GitHub Actions workflow (`.github/workflows/deploy.yml`)
-2. SRE Agent 1 must have an HTTP trigger configured
-3. GitHub MCP connector must be set up with a PAT
+1. Add a GitHub Actions deployment workflow to your fork (this repository does not include one by default)
+2. Configure `ZAVA_GH_REPO=maihh97/wellbeing-app-sre-agent`
+3. Configure `ZAVA_GH_TOKEN` with repository contents/workflow access
+4. Configure `ZAVA_SRE_TRIGGER_URL` from the SRE Agent HTTP trigger
+5. Add the GitHub connector if you want commit-diff correlation
 
 **How to trigger:**
 
-*Option A — Via GitHub Actions:*
 ```bash
-# Trigger the workflow with force_failure=true
-gh workflow run deploy.yml -f force_failure=true
+python simulator/demo.py 3
 ```
 
-*Option B — Via the simulator:*
-```bash
-python simulator/demo.py
-# Select option 3: "Bad Deployment"
-```
-
-The simulator stops the app service, causing health checks to fail.
+The simulator pushes a deliberately bad `appsettings.json`, monitors the latest GitHub Actions run, waits for `/health` to fail, and invokes the SRE Agent HTTP trigger.
 
 **What to expect:**
-1. The deployment fails or the app health check returns HTTP 503
+1. GitHub Actions deploys a bad database hostname and `/health` fails
 2. GitHub Actions sends an HTTP trigger to the SRE Agent with deployment metadata
 3. The `deployment-validator` agent activates
 4. Agent hits `/health`, sees the failure, and investigates via GitHub MCP
 5. Agent checks the commit diff, identifies the issue, and reports findings
-6. If the app was stopped, the agent restarts it and confirms health
+6. After approval, the configuration is restored and health is confirmed
 
 ---
 
@@ -306,15 +301,41 @@ The simulator creates a ServiceNow incident for a laptop warranty issue, then tr
 
 ---
 
-### Scenario 5: Reset All
+### Scenario 5: HTTP Trigger (Recommended)
 
 | | |
 |---|---|
-| **What it demonstrates** | Cleans up all demo scenarios — drops indexes, kills blocking sessions, restarts apps |
+| **What it demonstrates** | A post-deployment failure invokes SRE Agent directly without requiring GitHub Actions |
+| **SRE Agent features** | HTTP trigger, App Service health investigation, Application Insights evidence, review-mode remediation |
+
+```powershell
+$env:ZAVA_RESOURCE_GROUP = "rg-zava"
+$env:ZAVA_APP_NAME = "app-zava956235"
+$env:ZAVA_APP_URL = "https://app-zava956235.azurewebsites.net"
+$env:ZAVA_SRE_TRIGGER_URL = "<trigger-url>"
+python simulator/demo.py 5
+```
+
+Press `b` to inject an invalid SQL hostname. The simulator confirms the health failure, calls the SRE Agent trigger, and monitors recovery. Press `f` to restore the configuration manually or `q` to exit.
+
+---
+
+### Scenario 6: Simulate All
+
+Launches scenarios 1, 5, and 4 in separate terminals. This requires both private SQL connectivity and ServiceNow configuration; it is not the recommended keynote path.
 
 ```bash
-python simulator/demo.py
-# Select option 5: "Reset All"
+python simulator/demo.py 6
+```
+
+---
+
+### Scenario 7: Reset All
+
+Cleans up SQL indexes/blocking sessions, restores the managed-identity connection string, restarts the app, and checks health.
+
+```bash
+python simulator/demo.py 7
 ```
 
 ---
@@ -327,15 +348,15 @@ python simulator/demo.py
 2. Click **"Create Agent"**
 3. Create **Agent 1 — SQL & App Performance:**
    - Name: `zava-sreagent-1`
-  - Agent resource group: create or select a separate group such as `rg-zava-sre`
-  - Region: `East US 2`
-  - Resource group to monitor: `rg-zava`
+   - Agent resource group: `rg-zava`
+   - Region: `East US 2`
+   - Resource group to monitor: `rg-zava`
    - Description: "Monitors SQL performance, handles deployments, manages app health"
 4. Create **Agent 2 — IT Support & ServiceNow:**
    - Name: `zava-sreagent-2`
-  - Agent resource group: `rg-zava-sre`
-  - Region: `East US 2`
-  - Resource group to monitor: `rg-zava`
+   - Agent resource group: `rg-zava`
+   - Region: `East US 2`
+   - Resource group to monitor: `rg-zava`
    - Description: "Handles IT support tickets, warranty lookups, ServiceNow integration"
 
 ### Step 2: Configure MCP Connectors
@@ -344,7 +365,7 @@ See [MCP Connector Setup](#mcp-connector-setup) below.
 
 ### Step 3: Apply Skills, Hooks, and Agents
 
-Use **Builder** in the SRE Agent portal to add the repository definitions under `sre-config/`, or manage the agent through the Azure MCP Server SRE Agent tools. This machine does not currently have the legacy `srectl` CLI installed.
+Use **Builder** in the SRE Agent portal to add the repository definitions under `sre-config/`, or manage the agent through the Azure MCP Server SRE Agent tools.
 
 If `srectl` is available in your environment, the repository still groups the definitions by agent:
 
@@ -372,14 +393,15 @@ srectl apply -f sre-config/agent2/tools/
 
 ### Step 4: Set Up Incident Handlers and HTTP Triggers
 
-**HTTP Trigger (for GitHub Actions):**
+**HTTP Trigger (recommended demo):**
 1. In the SRE Agent portal, go to Agent 1 → Triggers
-2. Create a new HTTP trigger
-3. Copy the trigger URL into `.github/workflows/deploy.yml` (line 79)
+2. Create an HTTP trigger routed to `deployment-validator`
+3. Start in **Review** mode
+4. Copy the trigger URL into `ZAVA_SRE_TRIGGER_URL`
 
 **Alert Handler (for Azure Monitor):**
 1. In the SRE Agent portal, go to Agent 1 → Alert Handlers
-2. Link the DTU, HTTP 5xx, and Health Check alert rules
+2. Link `alert-zava956235-dtu-high`, `alert-zava956235-http-5xx`, and `alert-zava956235-health-check`
 3. SRE Agent will automatically activate when these alerts fire
 
 ---
@@ -406,7 +428,7 @@ The GitHub MCP connector allows SRE Agent to inspect repositories, commits, and 
 
 1. Create a GitHub Personal Access Token (PAT):
    - Go to [github.com/settings/tokens](https://github.com/settings/tokens)
-   - Create a fine-grained token with `repo` read access to your fork
+   - Create a fine-grained token with read access to `maihh97/wellbeing-app-sre-agent`
 2. In SRE Agent portal → Agent 1 → Tools → Add MCP Connector
 3. Package: `@github/github-mcp-server`
 4. Environment variables:
@@ -463,9 +485,11 @@ python simulator/demo.py
 # Direct scenario launch
 python simulator/demo.py 1    # Slow Query (Missing Index)
 python simulator/demo.py 2    # Blocking Chain
-python simulator/demo.py 3    # Bad Deployment
-python simulator/demo.py 4    # ServiceNow Integration
-python simulator/demo.py 5    # Reset All
+python simulator/demo.py 3    # GitHub Actions bad deployment
+python simulator/demo.py 4    # ServiceNow integration
+python simulator/demo.py 5    # Direct HTTP-trigger deployment failure
+python simulator/demo.py 6    # Launch multiple scenarios
+python simulator/demo.py 7    # Reset all
 ```
 
 ### Environment Variables
@@ -479,6 +503,7 @@ $env:ZAVA_SQL_SERVER     = "sql-zava956235.database.windows.net"
 $env:ZAVA_SQL_DATABASE   = "sqldb-zava956235"
 $env:ZAVA_APP_URL        = "https://app-zava956235.azurewebsites.net"
 $env:ZAVA_SRE_TRIGGER_URL = "<URL copied from Builder > HTTP triggers>"
+$env:ZAVA_GH_REPO         = "maihh97/wellbeing-app-sre-agent"
 $env:ZAVA_SN_URL       = "https://dev123456.service-now.com"
 $env:ZAVA_SN_USER      = "admin"
 $env:ZAVA_SN_PASS      = "your-password"
@@ -499,7 +524,7 @@ After deployment, bookmark these:
 | **Azure Portal** | `https://portal.azure.com` → resource group `rg-zava` |
 | **SRE Agent Portal** | `https://sre.azure.com` |
 | **Dashboard** | Azure Portal → search "Zava Operations Dashboard" |
-| **App Insights** | Azure Portal → `ai-zava` |
+| **App Insights** | Azure Portal → `ai-zava956235` |
 | **SQL Database** | Azure Portal → `sql-zava956235` / `sqldb-zava956235` |
 
 ---
@@ -539,7 +564,7 @@ Scenarios 1 and 2 make direct SQL connections. Run them from a VNet-connected ho
 **Problem:** DTU alert doesn't fire during Scenario 1.
 
 - The Basic 5 DTU tier has very low headroom — alerts typically fire within 2–5 minutes
-- Check Azure Monitor → Alerts → look for "alert-zava-dtu-high"
+- Check Azure Monitor → Alerts → look for `alert-zava956235-dtu-high`
 - Verify the alert rule is enabled: Azure Portal → Alerts → Alert Rules
 - If the simulator queries complete too fast, the DTU spike may be insufficient. Run the simulator longer.
 - Check the evaluation window: the alert uses a 5-minute window with 1-minute frequency
@@ -573,4 +598,4 @@ All resources use the lowest production-capable SKUs:
 
 ## License
 
-This project is for demonstration purposes as part of Azure Friday.
+This repository is a demonstration environment for Azure SRE Agent and a non-clinical employee wellbeing experience.
