@@ -1488,7 +1488,7 @@ def scenario_all():
 
 _GH_WEBHOOK_URL = os.environ.get("ZAVA_SRE_TRIGGER_URL", "<SRE_TRIGGER_URL>")
 
-_GH_REPO = os.environ.get("ZAVA_GH_REPO", "maihh97/wellbeing-app-sre-agent")
+_GH_REPO = os.environ.get("ZAVA_GH_REPO", "maihh97/zava-sre-agent-demos")
 _GH_TOKEN = os.environ.get("ZAVA_GH_TOKEN", "")
 
 
