@@ -30,10 +30,19 @@ function Set-RecommendationsUpstream {
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to set $settingName on $AppName."
     }
+
+    az webapp restart `
+        --resource-group $ResourceGroup `
+        --name $AppName `
+        --output none
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to restart $AppName after updating $settingName."
+    }
 }
 
 function Wait-ForHealthyApp {
-    for ($attempt = 1; $attempt -le 18; $attempt++) {
+    for ($attempt = 1; $attempt -le 36; $attempt++) {
         try {
             $response = Invoke-WebRequest -Uri $healthUrl -TimeoutSec 20 -SkipHttpErrorCheck
             if ([int]$response.StatusCode -eq 200) {
@@ -50,6 +59,35 @@ function Wait-ForHealthyApp {
     throw "The app did not become healthy after updating $settingName."
 }
 
+function Invoke-RecommendationsRequest {
+    $cacheBuster = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    Invoke-WebRequest `
+        -Uri "${recommendationsUrl}?ts=$cacheBuster" `
+        -Headers @{ 'Cache-Control' = 'no-cache' } `
+        -TimeoutSec 20 `
+        -SkipHttpErrorCheck
+}
+
+function Wait-ForRecommendationsStatus {
+    param([Parameter(Mandatory)][int]$ExpectedStatus)
+
+    for ($attempt = 1; $attempt -le 36; $attempt++) {
+        try {
+            $response = Invoke-RecommendationsRequest
+            if ([int]$response.StatusCode -eq $ExpectedStatus) {
+                return
+            }
+        }
+        catch {
+            # App settings restart the web app; transient connection failures are expected.
+        }
+
+        Start-Sleep -Seconds 5
+    }
+
+    throw "The recommendations endpoint did not return HTTP $ExpectedStatus after updating $settingName."
+}
+
 function Get-RecommendationsStatus {
     $setting = az webapp config appsettings list `
         --resource-group $ResourceGroup `
@@ -58,7 +96,7 @@ function Get-RecommendationsStatus {
         --output tsv
 
     $health = Invoke-WebRequest -Uri $healthUrl -TimeoutSec 20 -SkipHttpErrorCheck
-    $recommendations = Invoke-WebRequest -Uri $recommendationsUrl -TimeoutSec 20 -SkipHttpErrorCheck
+    $recommendations = Invoke-RecommendationsRequest
 
     [pscustomobject]@{
         UpstreamUrl          = $setting
@@ -73,9 +111,10 @@ switch ($Action) {
         Write-Host 'Simulating a bad deployment of the wellbeing recommendations URL...' -ForegroundColor Yellow
         Set-RecommendationsUpstream -Url $brokenUpstream
         Wait-ForHealthyApp
+        Wait-ForRecommendationsStatus -ExpectedStatus 502
 
         $results = for ($request = 1; $request -le $RequestCount; $request++) {
-            $response = Invoke-WebRequest -Uri $recommendationsUrl -TimeoutSec 20 -SkipHttpErrorCheck
+            $response = Invoke-RecommendationsRequest
             [pscustomobject]@{
                 Request = $request
                 Status  = [int]$response.StatusCode
@@ -108,6 +147,7 @@ Ask for approval before the write, then verify /health and /api/wellbeing/recomm
         Write-Host 'Restoring the wellbeing recommendations dependency...' -ForegroundColor Yellow
         Set-RecommendationsUpstream -Url $healthyUpstream
         Wait-ForHealthyApp
+        Wait-ForRecommendationsStatus -ExpectedStatus 200
         $status = Get-RecommendationsStatus
         $status | Format-List
         if ($status.RecommendationsCode -ne 200) {

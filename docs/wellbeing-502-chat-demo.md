@@ -59,7 +59,7 @@ https://app-zava956235-itportal.azurewebsites.net
 The script:
 
 1. Changes `WellbeingRecommendations__BaseUrl` to an unresolvable hostname.
-2. Waits for the App Service restart to finish.
+2. Restarts the App Service and waits for the recommendations endpoint to return 502.
 3. Sends eight requests to `/api/wellbeing/recommendations`.
 4. Verifies every request returns HTTP 502.
 5. Prints the Agent 1 chat prompts.
@@ -112,6 +112,8 @@ If the agent cannot perform the write, restore the service with:
 ```powershell
 ./simulator/wellbeing-502.ps1 -Action Restore
 ```
+
+The restore action restarts the App Service and waits until both `/health` and the recommendations endpoint return 200. App Service configuration propagation can take several minutes.
 
 Always run `Restore` before ending the demo if the recommendations endpoint is still returning 502.
 
