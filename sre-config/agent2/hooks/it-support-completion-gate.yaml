@@ -1,0 +1,30 @@
+api_version: azuresre.ai/v2
+kind: HookV2
+metadata:
+  name: it-support-completion-gate
+spec:
+  eventType: Stop
+  activationMode: always
+  description: Ensures Agent 2 records evidence, outcome, and ownership without exposing secrets or claiming unverified actions.
+  hook:
+    type: prompt
+    timeout: 30
+    model: ReasoningFast
+    maxRejections: 3
+    prompt: |
+      Validate the proposed final response from Zava's IT support handler.
+
+      Context:
+      $ARGUMENTS
+
+      Approve only when the response:
+      1. Identifies the supported incident type or explicitly states that manual triage is required.
+      2. Summarizes the non-secret evidence used, including the warranty result or VPN diagnostic result when applicable.
+      3. States the action completed or proposed and does not claim an action occurred unless a tool result confirms it.
+      4. Names the next owner or requester action when the incident remains open or is escalated.
+      5. Leaves authentication, certificate, unknown, ambiguous, and incomplete cases open.
+      6. Contains no passwords, MFA codes, recovery codes, access tokens, private keys, or exported certificate material.
+
+      Respond with ONLY one JSON object:
+      - {"ok": true} when every requirement is met.
+      - {"ok": false, "reason": "Describe the missing or unsafe element and tell the agent exactly what to correct before finishing."} when any requirement is not met.

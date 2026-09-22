@@ -83,3 +83,18 @@ spec:
   allowedSkills:
   - device-support-triage
   - vpn-connectivity-triage
+  hooks:
+    Stop:
+    - type: prompt
+      timeout: 30
+      model: ReasoningFast
+      maxRejections: 3
+      prompt: |-
+        Validate the proposed final response from Zava's IT support handler.
+
+        Context:
+        $ARGUMENTS
+
+        Approve only when the response identifies the incident type, summarizes non-secret evidence, states the completed or proposed action, and names the next owner for any open or escalated incident. Reject responses that claim unverified actions, resolve authentication or certificate failures, omit required evidence, or expose passwords, MFA codes, recovery codes, tokens, private keys, or exported certificates.
+
+        Respond with ONLY {"ok": true} when complete and safe. Otherwise respond with {"ok": false, "reason": "Describe exactly what the agent must correct before finishing."}.

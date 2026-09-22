@@ -32,3 +32,18 @@ spec:
   enableVanillaMode: false
   enableSkills: false
   addSystemSkills: false
+  hooks:
+    Stop:
+    - type: prompt
+      timeout: 30
+      model: ReasoningFast
+      maxRejections: 3
+      prompt: |-
+        Validate the proposed final response from Zava's deployment validator.
+
+        Context:
+        $ARGUMENTS
+
+        Approve only when the response states impact, summarizes concrete evidence, identifies the root cause or remaining uncertainty, distinguishes executed actions from proposals, and names the next owner for unresolved work. If mitigation was executed, require post-change verification of the affected endpoint and overall health. If an Azure write is only proposed, require Review approval and do not allow a claim of success before a write tool confirms it.
+
+        Respond with ONLY {"ok": true} when complete and supported by evidence. Otherwise respond with {"ok": false, "reason": "Describe exactly what evidence, verification, or ownership detail is missing."}.

@@ -233,7 +233,8 @@ Agent 1 includes:
 
 - SQL query and blocking diagnosis skills
 - Guarded SQL remediation skills
-- Change-risk and SQL write hooks
+- Change-risk, SQL write, Azure write audit, and evidence-quality hooks
+- Deployment investigation completion hook
 - Deployment validation agents
 - Weekly cost reporting
 
@@ -251,6 +252,7 @@ Agent 2 includes:
 
 - `CheckWarranty` and `DiagnoseVpnIssue` tools
 - Device and VPN triage skills
+- IT support completion hook
 - Zava IT support operations runbook knowledge
 - Microsoft Windows VPN troubleshooting reference sourced from Microsoft Learn
 - Weekday IT support queue review at 13:00 UTC
@@ -259,6 +261,8 @@ Agent 2 includes:
 The scheduled tasks are report-only. They do not acknowledge, update, resolve, reassign, or notify from ServiceNow.
 
 Refresh the Microsoft reference when its linked source guidance changes.
+
+The completion hooks are custom-agent-level hooks. Find them under **Builder > Agent Canvas**, select `deployment-validator` or `it-support-handler`, and then select **Manage Hooks**. They do not appear in the global **Builder > Hooks** list. Agent 1 also has two agent-level hooks under **Builder > Hooks**: the Command-type `azure-write-audit` hook and the Prompt-type `evidence-quality-gate` hook.
 
 ### Environment Variables
 

@@ -1,0 +1,23 @@
+api_version: azuresre.ai/v2
+kind: HookV2
+metadata:
+  name: azure-write-audit
+spec:
+  eventType: PostToolUse
+  activationMode: always
+  description: Adds an audit checkpoint after Azure CLI write operations without recording command inputs or secrets.
+  hook:
+    type: command
+    matcher: RunAzCliWriteCommands
+    timeout: 30
+    failMode: Allow
+    script: |
+      #!/usr/bin/env python3
+      import json
+
+      print(json.dumps({
+          "decision": "allow",
+          "hookSpecificOutput": {
+              "additionalContext": "[AUDIT] An Azure write tool completed. Before finishing, state the target resource, the intended change, whether the tool reported success, and the post-change verification. Do not include credentials, tokens, or raw secret-bearing command inputs."
+          }
+      }))

@@ -1,0 +1,31 @@
+api_version: azuresre.ai/v2
+kind: HookV2
+metadata:
+  name: evidence-quality-gate
+spec:
+  eventType: Stop
+  activationMode: always
+  description: Requires Agent 1 final responses to separate evidence from hypotheses and verify executed mitigations.
+  hook:
+    type: prompt
+    timeout: 30
+    model: ReasoningFast
+    maxRejections: 3
+    prompt: |
+      Validate the proposed final response from Zava SRE Agent 1.
+
+      Context:
+      $ARGUMENTS
+
+      Approve only when every applicable requirement is met:
+      1. Observed facts are clearly separated from hypotheses or recommendations.
+      2. The response names the evidence sources used, such as Azure Monitor, Application Insights, Log Analytics, Azure configuration, source control, or SQL diagnostics.
+      3. The root cause is supported by evidence, or the response explicitly states what remains unconfirmed.
+      4. Executed changes are distinguished from proposed changes.
+      5. Any executed mitigation includes post-change verification and its result.
+      6. Any unresolved issue has a next owner or follow-up action.
+      7. The response contains no credentials, access tokens, connection-string secrets, or other sensitive values.
+
+      Respond with ONLY one JSON object:
+      - {"ok": true} when the response is complete and evidence-backed.
+      - {"ok": false, "reason": "Describe the missing evidence, verification, uncertainty, ownership, or sensitive-data problem and tell the agent exactly what to correct."} otherwise.

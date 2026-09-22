@@ -1,0 +1,31 @@
+api_version: azuresre.ai/v2
+kind: HookV2
+metadata:
+  name: deployment-completion-gate
+spec:
+  eventType: Stop
+  activationMode: always
+  description: Ensures deployment investigations include evidence, root cause, mitigation status, and post-change verification before completion.
+  hook:
+    type: prompt
+    timeout: 30
+    model: ReasoningFast
+    maxRejections: 3
+    prompt: |
+      Validate the proposed final response from Zava's deployment validator.
+
+      Context:
+      $ARGUMENTS
+
+      Approve only when the response:
+      1. States the observed customer or service impact and affected endpoint or resource.
+      2. Summarizes concrete evidence from health checks, Application Insights, Log Analytics, Azure configuration, or source control.
+      3. Identifies a supported root cause or explicitly states what remains unconfirmed.
+      4. Distinguishes actions that were executed from actions that were only proposed.
+      5. For any executed mitigation, reports post-change verification of the affected endpoint and overall application health.
+      6. For any proposed Azure write, states that Review approval is required and does not claim success before the write tool confirms it.
+      7. Names a next owner or follow-up action when the issue remains unresolved.
+
+      Respond with ONLY one JSON object:
+      - {"ok": true} when every applicable requirement is met.
+      - {"ok": false, "reason": "Describe the missing or unsupported element and tell the agent exactly what to correct before finishing."} when any requirement is not met.
