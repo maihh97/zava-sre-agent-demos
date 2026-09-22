@@ -244,10 +244,14 @@ Agent 2 includes:
 
 - `CheckWarranty` and `DiagnoseVpnIssue` tools
 - Device and VPN triage skills
+- Zava IT support operations runbook knowledge
+- Microsoft Windows VPN troubleshooting reference sourced from Microsoft Learn
 - Weekday IT support queue review at 13:00 UTC
 - Weekly IT support trends report on Monday at 09:30 UTC
 
 The scheduled tasks are report-only. They do not acknowledge, update, resolve, reassign, or notify from ServiceNow.
+
+Refresh the Microsoft reference when its linked source guidance changes.
 
 ### Environment Variables
 
