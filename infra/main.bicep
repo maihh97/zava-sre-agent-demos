@@ -223,6 +223,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
     vnetRouteAllEnabled: true
     siteConfig: {
       linuxFxVersion: 'DOTNETCORE|8.0'
+      appCommandLine: 'dotnet ZavaWellbeingApp.dll'
       alwaysOn: true
       healthCheckPath: '/health'
       appSettings: [
@@ -233,6 +234,14 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'ApplicationInsightsAgent_EXTENSION_VERSION'
           value: '~3'
+        }
+        {
+          name: 'WellbeingRecommendations__BaseUrl'
+          value: 'https://${itPortal.properties.defaultHostName}'
+        }
+        {
+          name: 'WellbeingPortal__AllowedOrigin'
+          value: 'https://${itPortal.properties.defaultHostName}'
         }
       ]
       connectionStrings: [

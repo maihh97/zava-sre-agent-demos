@@ -213,10 +213,47 @@ a {
 }
 
 .programs,
+.recommendations-section,
 .resource-section {
   margin: 0 auto;
   max-width: 1440px;
   padding: 96px clamp(20px, 6vw, 96px);
+}
+
+.recommendations-section {
+  border-top: 1px solid var(--line);
+}
+
+.recommendation-list {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 36px;
+}
+
+.recommendation-list article {
+  background: var(--white);
+  border-left: 4px solid var(--forest);
+  min-height: 190px;
+  padding: 28px;
+}
+
+.recommendation-list span {
+  color: var(--forest);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.recommendation-list h3 {
+  font-family: "Manrope", sans-serif;
+  font-size: 1.25rem;
+  margin: 14px 0 8px;
+}
+
+.recommendation-list p {
+  color: var(--muted);
+  margin: 0;
 }
 
 .section-heading {
@@ -429,6 +466,10 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  .recommendation-list {
+    grid-template-columns: 1fr;
+  }
+
   .program-card {
     min-height: 340px;
   }
@@ -486,6 +527,7 @@ footer {
   }
 
   .programs,
+  .recommendations-section,
   .resource-section {
     padding-bottom: 72px;
     padding-top: 72px;

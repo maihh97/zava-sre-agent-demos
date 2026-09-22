@@ -5,7 +5,26 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddApplicationInsightsTelemetry();
+if (!string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]) ||
+    !string.IsNullOrWhiteSpace(builder.Configuration["ApplicationInsights:ConnectionString"]))
+{
+    builder.Services.AddApplicationInsightsTelemetry();
+}
+builder.Services.AddHttpClient("WellbeingRecommendations", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
+var wellbeingPortalOrigin = builder.Configuration["WellbeingPortal:AllowedOrigin"]
+    ?? "https://app-zava956235-itportal.azurewebsites.net";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("WellbeingPortal", policy =>
+    {
+        policy.WithOrigins(wellbeingPortalOrigin)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 var app = builder.Build();
 
@@ -16,6 +35,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("WellbeingPortal");
 
 // GET / — welcome page
 app.MapGet("/", () => Results.Ok(new
@@ -49,6 +69,55 @@ app.MapGet("/health", async (IConfiguration config) =>
     {
         return Results.Json(new { status = "unhealthy", database = "connection_failed", error = ex.Message },
             statusCode: 503);
+    }
+});
+
+// GET /api/wellbeing/recommendations - proxies the portal recommendations service
+app.MapGet("/api/wellbeing/recommendations", async (
+    IConfiguration config,
+    IHttpClientFactory httpClientFactory,
+    ILogger<Program> logger) =>
+{
+    var baseUrl = config["WellbeingRecommendations:BaseUrl"];
+    if (string.IsNullOrWhiteSpace(baseUrl))
+    {
+        return Results.Json(new
+        {
+            error = "Wellbeing recommendations are not configured",
+            dependency = "wellbeing-recommendations"
+        }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    var upstreamUrl = $"{baseUrl.TrimEnd('/')}/api/recommendations";
+    try
+    {
+        var client = httpClientFactory.CreateClient("WellbeingRecommendations");
+        using var response = await client.GetAsync(upstreamUrl);
+        if (!response.IsSuccessStatusCode)
+        {
+            logger.LogError(
+                "Wellbeing recommendations dependency returned {StatusCode} from {UpstreamUrl}",
+                (int)response.StatusCode,
+                upstreamUrl);
+            return Results.Json(new
+            {
+                error = "Wellbeing recommendations are temporarily unavailable",
+                dependency = "wellbeing-recommendations",
+                upstreamStatus = (int)response.StatusCode
+            }, statusCode: StatusCodes.Status502BadGateway);
+        }
+
+        var payload = await response.Content.ReadFromJsonAsync<List<WellbeingRecommendation>>();
+        return Results.Ok(payload ?? []);
+    }
+    catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+    {
+        logger.LogError(exception, "Wellbeing recommendations dependency failed at {UpstreamUrl}", upstreamUrl);
+        return Results.Json(new
+        {
+            error = "Wellbeing recommendations are temporarily unavailable",
+            dependency = "wellbeing-recommendations"
+        }, statusCode: StatusCodes.Status502BadGateway);
     }
 });
 
@@ -183,3 +252,4 @@ static async Task InitializeDatabaseAsync(IConfiguration configuration, ILogger 
 }
 
 record Product(int Id, string Name, decimal Price, string Category);
+record WellbeingRecommendation(string Title, string Summary, string Category);

@@ -23,6 +23,7 @@ The Zava Wellbeing portal is a sample workload, not the scope of the whole repos
 | 6 | Combined demonstration | Both | Simulator launcher | Launch scenarios 1, 5, and 4 |
 | 7 | Reset | N/A | Simulator reset | Restore application configuration and demo state |
 | 8 | VPN support | Agent 2 | ServiceNow incident | Apply bounded runbooks or escalate sensitive failures |
+| 9 | Wellbeing recommendations 502 | Agent 1 chat | Manual fault script | Investigate a realistic partial dependency outage on demand |
 
 ## Prerequisites
 
@@ -206,6 +207,12 @@ Create a priority `3` ServiceNow incident assigned to `IT Support` with a short 
 | Unknown error | Leave open and route to Network Operations |
 
 The agent never requests passwords, MFA codes, recovery codes, tokens, or private keys.
+
+### 9. Wellbeing Recommendations 502
+
+Use [`simulator/wellbeing-502.ps1`](simulator/wellbeing-502.ps1) to simulate an invalid upstream recommendations URL. The portal remains available, `/health` stays healthy, and only the recommendations endpoint returns 502.
+
+This scenario is chat-led: keep the HTTP 5xx response plan disabled, generate the evidence with the script, and ask Agent 1 to investigate and propose the App Service setting rollback. See the [full demo runbook](docs/wellbeing-502-chat-demo.md).
 
 </details>
 

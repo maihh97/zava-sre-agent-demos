@@ -84,6 +84,17 @@
       </div>
     </section>
 
+    <section class="recommendations-section" aria-labelledby="recommendations-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Recommended today</p>
+          <h2 id="recommendations-title">Small actions for a better day</h2>
+        </div>
+        <p id="recommendations-status" role="status">Loading recommendations...</p>
+      </div>
+      <div class="recommendation-list" id="recommendation-list" aria-live="polite"></div>
+    </section>
+
     <section class="benefits-band" id="benefits" aria-labelledby="benefits-title">
       <div class="benefits-intro">
         <p class="eyebrow">Included benefits</p>
@@ -126,5 +137,34 @@
     <span>Zava Wellbeing</span>
     <span>Programs and benefits for everyday life.</span>
   </footer>
+  <script>
+    const recommendationsApi = "https://app-zava956235.azurewebsites.net/api/wellbeing/recommendations";
+    const statusElement = document.getElementById("recommendations-status");
+    const listElement = document.getElementById("recommendation-list");
+
+    fetch(recommendationsApi)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Request failed with ${response.status}`);
+        return response.json();
+      })
+      .then((items) => {
+        statusElement.textContent = "Personalized from the Zava wellbeing service.";
+        listElement.replaceChildren(...items.map((item) => {
+          const article = document.createElement("article");
+          const category = document.createElement("span");
+          const title = document.createElement("h3");
+          const summary = document.createElement("p");
+          category.textContent = item.category;
+          title.textContent = item.title;
+          summary.textContent = item.summary;
+          article.append(category, title, summary);
+          return article;
+        }));
+      })
+      .catch(() => {
+        statusElement.textContent = "Recommendations are temporarily unavailable. Other wellbeing resources are still available.";
+        listElement.replaceChildren();
+      });
+  </script>
 </body>
 </html>
