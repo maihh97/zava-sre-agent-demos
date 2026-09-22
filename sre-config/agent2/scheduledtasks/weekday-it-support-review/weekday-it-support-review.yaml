@@ -1,0 +1,20 @@
+api_version: azuresre.ai/v1
+kind: ScheduledTask
+metadata:
+  name: weekday-it-support-review
+  owner:
+  version:
+  tags:
+spec:
+  name: weekday-it-support-review
+  cron_expression: ''
+  agent_prompt: Review Agent 2 ServiceNow incidents from the past 24 hours for the IT Support assignment group. Summarize open and in-progress laptop and VPN incidents, identify tickets missing required diagnostic details, list incidents awaiting Review approval or manual escalation, and flag repeated error codes or device models. Do not acknowledge, update, resolve, reassign, or notify from this scheduled task. Exclude passwords, tokens, MFA data, private keys, and unnecessary personal data. Format the result as Queue Summary, Missing Evidence, Awaiting Action, Repeated Patterns, and Recommended Follow-up.
+  description: Weekday read-only review of the IT Support ServiceNow queue
+  agent:
+  start_time: 2026-09-23T13:00:00Z
+  end_time:
+  duration_hours:
+  thread_id:
+  max_executions:
+  notification_channel:
+  cron: 0 13 * * 1-5

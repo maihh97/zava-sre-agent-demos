@@ -14,7 +14,7 @@ spec:
 
     WARRANTY_API_URL = "https://app-zava956235-warranty.azurewebsites.net"
 
-    def check_warranty(serial_number: str) -> dict:
+    def main(serial_number: str) -> dict:
         """Check warranty status by calling the Zava Warranty API.
 
         Calls the real warranty lookup service to check device warranty

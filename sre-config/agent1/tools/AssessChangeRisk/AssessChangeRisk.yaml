@@ -9,33 +9,31 @@ spec:
   description: |-
     Assess the risk of a database change before executing it. Evaluates business hours, table criticality, row count, and operation type. ALWAYS call this tool before making any SQL write operation (CREATE INDEX, UPDATE, DELETE, KILL). The result determines whether human approval is needed.
   functionCode: |-
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     CRITICAL_TABLES = ['Orders', 'OrderItems', 'Payments', 'Users', 'Customers']
     HIGH_RISK_OPS = ['DELETE', 'DROP', 'TRUNCATE', 'ALTER']
     MEDIUM_RISK_OPS = ['CREATE INDEX', 'UPDATE', 'KILL']
     LOW_RISK_OPS = ['SELECT', 'INSERT']
 
-    def assess_change_risk(operation: str, table_name: str, row_count: int = 0, description: str = '') -> dict:
+    def main(operation: str, table_name: str, row_count: int = 0, description: str = '') -> dict:
         risks = []
         risk_score = 0
 
         # 1. Business hours check
-        hour = datetime.utcnow().hour
-        is_business_hours = 14 <= hour <= 6  # 6AM-10PM Pacific (UTC-8)
-        # Simplified: check if roughly business hours US
-        is_business_hours = 14 <= hour or hour <= 6
+        now_utc = datetime.now(timezone.utc)
+        is_business_hours = now_utc.hour >= 14 or now_utc.hour < 6
         if is_business_hours:
-            risks.append({'factor': 'Business Hours', 'level': 'WARNING', 'detail': f'Current time is {datetime.utcnow().strftime("%H:%M")} UTC — business hours in US Pacific. Schema changes may impact active users.'})
+            risks.append({'factor': 'Business Hours', 'level': 'WARNING', 'detail': f'Current time is {now_utc.strftime("%H:%M UTC")} - approximate business hours in US Pacific. Schema changes may impact active users.'})
             risk_score += 30
         else:
-            risks.append({'factor': 'Business Hours', 'level': 'OK', 'detail': f'Current time is {datetime.utcnow().strftime("%H:%M")} UTC — outside peak business hours.'})
+            risks.append({'factor': 'Business Hours', 'level': 'OK', 'detail': f'Current time is {now_utc.strftime("%H:%M UTC")} - outside approximate Pacific business hours.'})
 
         # 2. Table criticality
         table_clean = table_name.replace('[', '').replace(']', '').replace('dbo.', '').strip()
         is_critical = table_clean in CRITICAL_TABLES
         if is_critical:
-            risks.append({'factor': 'Table Criticality', 'level': 'HIGH', 'detail': f'{table_clean} is a CRITICAL table — changes directly affect business operations.'})
+            risks.append({'factor': 'Table Criticality', 'level': 'HIGH', 'detail': f'{table_clean} is a CRITICAL table - changes directly affect business operations.'})
             risk_score += 40
         else:
             risks.append({'factor': 'Table Criticality', 'level': 'LOW', 'detail': f'{table_clean} is not in the critical tables list.'})
@@ -43,13 +41,13 @@ spec:
 
         # 3. Row count
         if row_count > 100000:
-            risks.append({'factor': 'Data Volume', 'level': 'HIGH', 'detail': f'{row_count:,} rows — large table, operation may cause locks or high DTU.'})
+            risks.append({'factor': 'Data Volume', 'level': 'HIGH', 'detail': f'{row_count:,} rows - large table, operation may cause locks or high DTU.'})
             risk_score += 30
         elif row_count > 10000:
-            risks.append({'factor': 'Data Volume', 'level': 'MEDIUM', 'detail': f'{row_count:,} rows — moderate table size.'})
+            risks.append({'factor': 'Data Volume', 'level': 'MEDIUM', 'detail': f'{row_count:,} rows - moderate table size.'})
             risk_score += 15
         else:
-            risks.append({'factor': 'Data Volume', 'level': 'LOW', 'detail': f'{row_count:,} rows — small table.'})
+            risks.append({'factor': 'Data Volume', 'level': 'LOW', 'detail': f'{row_count:,} rows - small table.'})
             risk_score += 5
 
         # 4. Operation type
@@ -83,31 +81,26 @@ spec:
             'requires_approval': requires_approval,
             'recommendation': recommendation,
             'description': description,
-            'assessed_at': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC'),
+            'assessed_at': now_utc.strftime('%Y-%m-%d %H:%M:%S UTC'),
             'risk_factors': risks
         }
   timeoutSeconds: 240
-  dependencies:
-  - ''
-  authScopes:
+  dependencies: []
+  authScopes: []
   parameters:
   - name: operation
     type: string
-    description: |-
-      string:The SQL operation to assess (e.g. CREATE INDEX, DELETE, UPDATE, KILL)
+    description: SQL operation to assess, such as CREATE INDEX, UPDATE, DELETE, or KILL.
     required: true
   - name: table_name
     type: string
-    description: |-
-      string:The target table name (e.g. Products, Orders)
+    description: Schema-qualified or unqualified table name affected by the operation.
     required: true
   - name: row_count
-    type: string
-    description: |-
-      integer:Approximate number of rows affected
-    required: true
+    type: integer
+    description: Estimated number of rows in the affected table or operation scope.
+    required: false
   - name: description
     type: string
-    description: |-
-      string:Brief description of what this change does
-    required: true
+    description: Brief explanation of the proposed change and expected outcome.
+    required: false

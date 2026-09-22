@@ -1,0 +1,20 @@
+api_version: azuresre.ai/v1
+kind: ScheduledTask
+metadata:
+  name: weekly-it-support-trends
+  owner:
+  version:
+  tags:
+spec:
+  name: weekly-it-support-trends
+  cron_expression: ''
+  agent_prompt: Analyze Agent 2 ServiceNow incident activity from the previous 7 days for the IT Support assignment group. Report laptop repair versus replacement outcomes, VPN error-code frequency, escalation destinations, unresolved or reopened incidents, missing-data patterns, and opportunities to improve runbooks. Use aggregate counts where possible and avoid unnecessary employee-identifying information. Do not modify incidents or send notifications from this scheduled task. Format the result as Executive Summary, Volume and Outcomes, VPN Trends, Device Trends, Escalations, Data Quality Gaps, and Runbook Recommendations.
+  description: Weekly read-only ServiceNow IT support trends report
+  agent:
+  start_time: 2026-09-28T09:30:00Z
+  end_time:
+  duration_hours:
+  thread_id:
+  max_executions:
+  notification_channel:
+  cron: 30 9 * * 1

@@ -169,8 +169,15 @@ wellbeing-app-sre-agent/
 │   └── agent2/                     # IT Support & ServiceNow Agent
 │       ├── agents/
 │       │   └── it-support-handler/         # Handle IT support requests
+│       ├── skills/
+│       │   ├── device-support-triage/      # Warranty-based device triage
+│       │   └── vpn-connectivity-triage/    # Bounded VPN diagnostics
+│       ├── scheduledtasks/
+│       │   ├── weekday-it-support-review/  # Daily queue review
+│       │   └── weekly-it-support-trends/   # Weekly trend report
 │       └── tools/
 │           ├── CheckWarranty/              # Warranty lookup tool
+│           ├── DiagnoseVpnIssue/            # Bounded VPN error runbooks
 │           └── LookupServiceNowIncident/   # ServiceNow integration
 │
 ├── dashboard.json                  # Azure Portal dashboard template
@@ -298,6 +305,18 @@ The simulator creates a ServiceNow incident for a laptop warranty issue, then tr
 3. Agent calls `CheckWarranty` with the laptop serial number
 4. The warranty API returns status (active/expired, replacement eligibility)
 5. Agent updates the ServiceNow incident with warranty details and recommendation
+
+#### Additional Agent 2 Demo: VPN Connectivity
+
+Agent 2 also handles moderate-priority ServiceNow incidents whose short description contains `VPN connectivity issue`. The `DiagnoseVpnIssue` tool recognizes VPN errors `809`, `720`, and `691`, plus certificate failures.
+
+- Errors `809` and `720` return low-risk remediation steps and may be resolved through the Review-mode approval gate.
+- Error `691`, certificate failures, and unknown errors remain open and are routed to the appropriate support team.
+- The workflow never requests passwords, MFA codes, tokens, recovery codes, or private keys.
+
+Create the incident in the `IT Support` assignment group with priority `3`, include the VPN error code and operating system in the description, and use a short description such as `VPN connectivity issue - Error 809`.
+
+Agent 2 includes two reusable skills for device and VPN triage. It also runs two read-only scheduled reviews in UTC: a weekday queue review at 13:00 and a weekly trends report on Monday at 09:30. Scheduled reviews report missing evidence, pending approvals, escalations, and recurring patterns without modifying ServiceNow incidents or sending notifications.
 
 ---
 

@@ -1,0 +1,102 @@
+api_version: azuresre.ai/v2
+kind: ExtendedAgentTool
+metadata:
+  name: DiagnoseVpnIssue
+spec:
+  type: PythonTool
+  connector: ''
+  toolMode: Auto
+  description: |-
+    Diagnose common corporate VPN connection failures from an error code and symptoms. Returns a bounded remediation runbook and whether the incident is safe for the IT support agent to resolve.
+  functionCode: |-
+    def main(error_code: str, symptoms: str = '', operating_system: str = 'Unknown') -> dict:
+        """Return an approved diagnostic runbook for a known VPN error."""
+        normalized_code = error_code.strip().upper().replace('ERROR', '').strip()
+        runbooks = {
+            '809': {
+                'diagnosis': 'The VPN gateway is not reachable from the current network.',
+                'steps': [
+                    'Confirm normal internet access works without the VPN.',
+                    'Disconnect and reconnect the current Wi-Fi or wired network.',
+                    'Close and reopen the VPN client, then retry the connection.',
+                    'Temporarily disconnect any personal VPN or proxy and retry.',
+                    'If possible, test from a mobile hotspot to isolate the local network.'
+                ],
+                'safe_to_resolve': True,
+                'escalation_team': 'Network Operations'
+            },
+            '720': {
+                'diagnosis': 'The VPN client could not establish the required network protocol.',
+                'steps': [
+                    'Restart the device to clear the stale VPN network session.',
+                    'Install pending operating-system and VPN-client updates.',
+                    'Retry the connection from a known working network.',
+                    'If the error persists, collect the VPN client version and timestamp.'
+                ],
+                'safe_to_resolve': True,
+                'escalation_team': 'Endpoint Engineering'
+            },
+            '691': {
+                'diagnosis': 'Authentication was rejected by the VPN service.',
+                'steps': [
+                    'Verify the username without sharing or recording a password.',
+                    'Use the approved self-service password reset or account-unlock flow.',
+                    'Complete any pending MFA prompt and retry once.',
+                    'Escalate if the account remains locked or access was recently changed.'
+                ],
+                'safe_to_resolve': False,
+                'escalation_team': 'Identity and Access Management'
+            },
+            'CERTIFICATE': {
+                'diagnosis': 'The VPN client reported a missing, expired, or untrusted certificate.',
+                'steps': [
+                    'Confirm the device date, time, and time zone are correct.',
+                    'Do not bypass certificate warnings or install unverified certificates.',
+                    'Collect the certificate subject and expiry date without exporting private keys.',
+                    'Escalate for managed certificate renewal or device compliance review.'
+                ],
+                'safe_to_resolve': False,
+                'escalation_team': 'Endpoint Engineering'
+            }
+        }
+
+        matched_code = normalized_code
+        if 'CERT' in normalized_code or 'CERTIFICATE' in symptoms.upper():
+            matched_code = 'CERTIFICATE'
+
+        runbook = runbooks.get(matched_code)
+        if not runbook:
+            return {
+                'recognized': False,
+                'error_code': normalized_code or 'Not provided',
+                'operating_system': operating_system,
+                'safe_to_resolve': False,
+                'escalation_team': 'Network Operations',
+                'message': 'No approved automated runbook matches this VPN issue.'
+            }
+
+        return {
+            'recognized': True,
+            'error_code': matched_code,
+            'operating_system': operating_system,
+            **runbook
+        }
+  timeoutSeconds: 60
+  dependencies: []
+  authScopes:
+  parameters:
+  - name: error_code
+    type: string
+    description: |-
+      string:VPN error code or certificate error label from the incident
+    required: true
+  - name: symptoms
+    type: string
+    description: |-
+      string:User-reported VPN symptoms with secrets removed
+    required: false
+  - name: operating_system
+    type: string
+    description: |-
+      string:Device operating system when stated in the incident
+    required: false
