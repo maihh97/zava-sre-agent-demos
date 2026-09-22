@@ -1,4 +1,4 @@
-# Wellbeing App — Azure SRE Agent Demo
+# Wellbeing App - Azure SRE Agent Demo
 
 **A complete, deployable lab for demonstrating Azure SRE Agent investigation, governance, and remediation workflows.**
 
@@ -64,13 +64,13 @@ The public experience is **Zava Wellbeing**. The supporting API and synthetic ca
 
 | Tool | Version | Install |
 |------|---------|---------|
-| **Azure subscription** | — | [Free account](https://azure.microsoft.com/free/) |
+| **Azure subscription** | N/A | [Free account](https://azure.microsoft.com/free/) |
 | **Azure CLI** | 2.60+ | `winget install Microsoft.AzureCLI` |
 | **.NET SDK** | 8.0+ | `winget install Microsoft.DotNet.SDK.8` |
 | **Python** | 3.11+ | `winget install Python.Python.3.12` |
 | **Node.js** | 18+ | `winget install OpenJS.NodeJS.LTS` |
 | **Azure SRE Agent portal** | current | [sre.azure.com](https://sre.azure.com) |
-| **ServiceNow PDI** | — | [Free instance](https://developer.servicenow.com/) |
+| **ServiceNow PDI** | N/A | [Free instance](https://developer.servicenow.com/) |
 
 > **Optional:** SQL Server Management Studio (SSMS) or Azure Data Studio for database inspection.
 
@@ -127,7 +127,7 @@ wellbeing-app-sre-agent/
 │
 ├── src/                            # Main .NET 8 operational demo API
 │   ├── Program.cs                  # Minimal API: /health, /api/products
-│   ├── AzureFridayApp.csproj       # .NET project (SQL Client, App Insights)
+│   ├── ZavaWellbeingApp.csproj     # .NET project (SQL Client, App Insights)
 │   └── appsettings.json            # Connection string config
 │
 ├── laptop-request-site/            # Wellbeing portal (Node.js static site)
@@ -365,13 +365,13 @@ python simulator/demo.py 7
 
 1. Navigate to [https://sre.azure.com](https://sre.azure.com)
 2. Click **"Create Agent"**
-3. Create **Agent 1 — SQL & App Performance:**
+3. Create **Agent 1: SQL & App Performance:**
    - Name: `zava-sreagent-1`
    - Agent resource group: `rg-zava`
    - Region: `East US 2`
    - Resource group to monitor: `rg-zava`
    - Description: "Monitors SQL performance, handles deployments, manages app health"
-4. Create **Agent 2 — IT Support & ServiceNow:**
+4. Create **Agent 2: IT Support & ServiceNow:**
    - Name: `zava-sreagent-2`
    - Agent resource group: `rg-zava`
    - Region: `East US 2`
@@ -485,7 +485,7 @@ The simulator (Scenario 4) creates incidents automatically. To create them manua
 1. Log into your ServiceNow instance
 2. Navigate to **Incident → Create New**
 3. Fill in:
-   - Short Description: `Laptop replacement request — warranty expired`
+   - Short Description: `Laptop replacement request - warranty expired`
    - Category: `Hardware`
    - Urgency: `Medium`
    - Description: `Employee SN-2021-DEL-3344 laptop warranty has expired. Requesting replacement.`
@@ -582,7 +582,7 @@ Scenarios 1 and 2 make direct SQL connections. Run them from a VNet-connected ho
 
 **Problem:** DTU alert doesn't fire during Scenario 1.
 
-- The Basic 5 DTU tier has very low headroom — alerts typically fire within 2–5 minutes
+- The Basic 5 DTU tier has very low headroom, so alerts typically fire within 2-5 minutes
 - Check Azure Monitor → Alerts → look for `alert-zava956235-dtu-high`
 - Verify the alert rule is enabled: Azure Portal → Alerts → Alert Rules
 - If the simulator queries complete too fast, the DTU spike may be insufficient. Run the simulator longer.

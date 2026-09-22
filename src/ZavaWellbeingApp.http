@@ -1,0 +1,6 @@
+@ZavaWellbeingApp_HostAddress = http://localhost:5153
+
+GET {{ZavaWellbeingApp_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

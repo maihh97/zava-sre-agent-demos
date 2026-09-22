@@ -140,7 +140,7 @@ if (-not $SkipApps) {
     $publishDir = "$RepoRoot\publish-main"
     $zipPath    = "$RepoRoot\publish-main.zip"
 
-    dotnet publish "$RepoRoot\src\AzureFridayApp.csproj" `
+    dotnet publish "$RepoRoot\src\ZavaWellbeingApp.csproj" `
         --configuration Release `
         --output $publishDir `
         --verbosity quiet
